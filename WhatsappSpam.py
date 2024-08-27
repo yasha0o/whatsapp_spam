@@ -129,8 +129,8 @@ class WatsappSpamWindow(QWidget):
 
         answer = QMessageBox.question(
             self,
-            'Подумай еще разок',
-            'Ты точно хочешь это отправить ' + self.phone_count_label.text() + ' контактам?',
+            'Подумайте еще разок',
+            'Вы точно хотите это отправить ' + self.phone_count_label.text() + ' контактам?',
             QMessageBox.StandardButton.Yes |
             QMessageBox.StandardButton.No
         )
@@ -153,6 +153,7 @@ class WatsappSpamWindow(QWidget):
     def send_thread(self, mode):
         for phone in self.phones:
             log = None
+            self.log_signal.emit(mode, "Попытка отправки сообщения на номер " + phone)
             if mode == "test":
                 log = self.test_spam(phone, self.spam_text.toPlainText())
             elif mode == "whatsapp":
@@ -179,7 +180,7 @@ class WatsappSpamWindow(QWidget):
 
     @Slot(str, str)
     def logging(self, mode, text):
-        self.log.appendPlainText("[" + str(mode) + "]" + "[" + str(datetime.now()) + "]" + str(text))
+        self.log.appendPlainText("[" + str(mode) + "]" + "[" + str(datetime.now()) + "] " + str(text))
 
 app = QApplication([])
 window = WatsappSpamWindow()
