@@ -29,14 +29,24 @@ class WatsappSpamWindow(QWidget):
         super().__init__()
         self.phones = []
         self.setWindowTitle("Рассылка сообщений в watsapp")
+        layout = QVBoxLayout()
+
+        self.authorization_button = QPushButton("Войти")
+        self.authorization_button.clicked.connect(self.on_authorization_button_clicked)
+        self.authorization_label = QLabel("Для начала работы нажмите на кнопку -->")
+
+        authorization_layout = QHBoxLayout()
+        authorization_layout.addWidget(self.authorization_label)
+        authorization_layout.addWidget(QSplitter())
+        authorization_layout.addWidget(self.authorization_button)
+
+        layout.addLayout(authorization_layout)
 
         self.file_line = QLineEdit()
         self.file_line.setReadOnly(True)
         self.file_line.textChanged.connect(self.read_excel)
         self.file_button = QPushButton("Выбрать файл...")
         self.file_button.clicked.connect(self.on_file_button_clicked)
-
-        layout = QVBoxLayout()
 
         file_layout = QHBoxLayout()
         file_layout.addWidget(self.file_line)
@@ -67,6 +77,7 @@ class WatsappSpamWindow(QWidget):
         self.test_button.clicked.connect(self.on_test_button_clicked)
         self.send_button = QPushButton("Отправить")
         self.send_button.clicked.connect(self.on_send_button_clicked)
+        self.send_button.setEnabled(False)
 
         self.spam_sent.connect(self.widget_enabled)
 
@@ -91,6 +102,23 @@ class WatsappSpamWindow(QWidget):
         layout.addLayout(log_layout)
 
         self.setLayout(layout)
+
+
+    def on_authorization_button_clicked(self):
+        self.logging("whatsapp", "Идет авторизация. "
+                                 "Просьба не закрывать браузер, "
+                                 "даже если авторизация уже завершилась/не потребовалась. "
+                                 "Проверка может занять некоторое время...")
+        result = self.whatsapp.authorization()
+        self.set_authorization_label(result)
+
+    def set_authorization_label(self, check_result):
+        if not check_result:
+            self.authorization_label.setText('<p style="color: red;">Требуется вход</p>')
+            self.send_button.setEnabled(False)
+        else:
+            self.authorization_label.setText('Вход выполнен')
+            self.send_button.setEnabled(True)
 
     def on_file_button_clicked(self):
         file_path, _filter = QFileDialog.getOpenFileName(self, "Выбор файла",
@@ -135,15 +163,6 @@ class WatsappSpamWindow(QWidget):
             QMessageBox.StandardButton.No
         )
         if answer == QMessageBox.StandardButton.Yes:
-            if (mode == "whatsapp"):
-                self.logging(mode, "Для начала авторизуйтесь в whatsapp")
-                if self.whatsapp.authorization() == True:
-                    self.logging(mode, "Авторизация успешна")
-                else:
-                    self.logging(mode, "Что-то пошло не так :(")
-                    self.widget_enabled(mode)
-                    return
-
             self.logging(mode, "Рассылка начата... Пути назад нет :)")
             spam = threading.Thread(target=self.send_thread, args=(mode,), daemon=True)
             spam.start()
@@ -181,6 +200,7 @@ class WatsappSpamWindow(QWidget):
     @Slot(str, str)
     def logging(self, mode, text):
         self.log.appendPlainText("[" + str(mode) + "]" + "[" + str(datetime.now()) + "] " + str(text))
+        self.log.repaint()
 
 app = QApplication([])
 window = WatsappSpamWindow()
