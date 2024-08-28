@@ -140,7 +140,7 @@ class WatsappSpamWindow(QWidget):
 
     def send(self, mode):
 
-        if (len(self.phones) == 0):
+        if len(self.phones) == 0:
             QMessageBox.critical(self, "Не загружены телефоны",
                                  "Некому отправить такую прекрасную рассылку. "
                                  "Выберете какой-нибудь файл excel, где есть колонка с именем Телефон "
@@ -201,6 +201,7 @@ class WatsappSpamWindow(QWidget):
     def logging(self, mode, text):
         self.log.appendPlainText("[" + str(mode) + "]" + "[" + str(datetime.now()) + "] " + str(text))
         self.log.repaint()
+
 
 app = QApplication([])
 window = WatsappSpamWindow()
