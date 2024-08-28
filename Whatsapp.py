@@ -1,6 +1,6 @@
 import os
 
-from PyQt6.QtCore import QSettings
+from PySide6.QtCore import QSettings
 from selenium.common import TimeoutException, NoSuchElementException
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support import expected_conditions as EC

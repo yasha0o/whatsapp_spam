@@ -3,7 +3,7 @@ import threading
 from datetime import datetime
 from time import sleep
 
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QApplication,
     QPushButton,
     QVBoxLayout,
@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import (
 
 import Whatsapp
 from ReadExcel import read_excel
-from PyQt6.QtCore import pyqtSignal as Signal, pyqtSlot as Slot, QSettings
+from PySide6.QtCore import Signal, Slot, QSettings
 
 
 class WatsappSpamWindow(QWidget):
@@ -28,7 +28,7 @@ class WatsappSpamWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.phones = []
-        self.setWindowTitle("Рассылка сообщений в watsapp")
+        self.setWindowTitle("Рассылка сообщений в whatsapp")
         layout = QVBoxLayout()
 
         self.file_line = QLineEdit()
