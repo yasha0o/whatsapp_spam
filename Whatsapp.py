@@ -41,6 +41,8 @@ class Whatsapp:
 
     def authorization(self):
         driver = None
+        wait = None
+
         try:
             auth_options = webdriver.ChromeOptions()
             auth_options.add_argument('--allow-profiles-outside-user-dir')
@@ -56,19 +58,20 @@ class Whatsapp:
             wait = WebDriverWait(driver, self.settings.value("whatsapp/timeout"))
             driver.get('https://web.whatsapp.com')
             qr_path = self.settings.value('whatsapp/qr_path')
-            chats_path = self.settings.value('whatsapp/chats_path')
-            try:
-                wait.until(EC.visibility_of_element_located((By.XPATH, chats_path)))
-                return True
-            except TimeoutException:
+
+            if not self.check_auth(wait):
                 print("hasn't chats. check qr....")
                 wait.until(EC.visibility_of_element_located((By.XPATH, qr_path)))
+            else:
+                return True
 
             while driver.find_element(By.XPATH, qr_path).is_displayed():
                 print("waiting authorization....")
                 sleep(5)
             driver.close()
         except NoSuchElementException:
+            if wait is None or not self.check_auth(wait):
+                return False
             if driver is not None:
                 driver.close()
             return True
@@ -76,6 +79,15 @@ class Whatsapp:
             print(e)
             return False
         return True
+
+    def check_auth(self, wait):
+        chats_path = self.settings.value('whatsapp/chats_path')
+        try:
+            wait.until(EC.visibility_of_element_located((By.XPATH, chats_path)))
+            return True
+        except TimeoutException:
+            return False
+
 
     def send_spam(self, phone, text):
         self.lazy_init()

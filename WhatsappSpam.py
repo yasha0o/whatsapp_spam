@@ -31,17 +31,6 @@ class WatsappSpamWindow(QWidget):
         self.setWindowTitle("Рассылка сообщений в watsapp")
         layout = QVBoxLayout()
 
-        self.authorization_button = QPushButton("Войти")
-        self.authorization_button.clicked.connect(self.on_authorization_button_clicked)
-        self.authorization_label = QLabel("Для начала работы нажмите на кнопку -->")
-
-        authorization_layout = QHBoxLayout()
-        authorization_layout.addWidget(self.authorization_label)
-        authorization_layout.addWidget(QSplitter())
-        authorization_layout.addWidget(self.authorization_button)
-
-        layout.addLayout(authorization_layout)
-
         self.file_line = QLineEdit()
         self.file_line.setReadOnly(True)
         self.file_line.textChanged.connect(self.read_excel)
@@ -90,6 +79,17 @@ class WatsappSpamWindow(QWidget):
         send_layout.addWidget(self.send_button)
 
         layout.addLayout(send_layout)
+
+        self.authorization_button = QPushButton("Проверить авторизацию / Войти")
+        self.authorization_button.clicked.connect(self.on_authorization_button_clicked)
+        self.authorization_label = QLabel("<-- Для разблокировки отправки авторизуйтесь")
+
+        authorization_layout = QHBoxLayout()
+        authorization_layout.addWidget(self.authorization_button)
+        authorization_layout.addWidget(QSplitter())
+        authorization_layout.addWidget(self.authorization_label)
+
+        layout.addLayout(authorization_layout)
 
         self.log = QPlainTextEdit()
         self.log.setReadOnly(True)
