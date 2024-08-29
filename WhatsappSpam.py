@@ -3,6 +3,7 @@ import threading
 from datetime import datetime
 from time import sleep
 
+import logging
 from PySide6.QtWidgets import (
     QApplication,
     QPushButton,
@@ -23,10 +24,19 @@ class WatsappSpamWindow(QWidget):
     spam_sent = Signal(str)
     log_signal = Signal(str, str)
     settings = QSettings("settings.ini", QSettings.Format.IniFormat)
+
     whatsapp = Whatsapp.Whatsapp(settings)
 
     def __init__(self):
         super().__init__()
+
+        logging.basicConfig(filename=str(self.settings.value('logs/log_path')),
+                            filemode='w',
+                            format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+                            datefmt='%H:%M:%S',
+                            level=logging.DEBUG)
+        logging.info(f"start settings = {self.settings.allKeys()}")
+
         self.phones = []
         self.setWindowTitle("Рассылка сообщений в whatsapp")
         layout = QVBoxLayout()
@@ -105,14 +115,19 @@ class WatsappSpamWindow(QWidget):
 
 
     def on_authorization_button_clicked(self):
+        logging.info("on_authorization_button_clicked")
+
         self.logging("whatsapp", "Идет авторизация. "
                                  "Просьба не закрывать браузер, "
                                  "даже если авторизация уже завершилась/не потребовалась. "
                                  "Проверка может занять некоторое время...")
         result = self.whatsapp.authorization()
+        logging.info(f"self.whatsapp.authorization() result {result}")
         self.set_authorization_label(result)
 
     def set_authorization_label(self, check_result):
+        logging.info("set_authorization_label")
+
         if not check_result:
             self.authorization_label.setText('<p style="color: red;">Требуется вход</p>')
             self.send_button.setEnabled(False)
@@ -121,32 +136,39 @@ class WatsappSpamWindow(QWidget):
             self.send_button.setEnabled(True)
 
     def on_file_button_clicked(self):
+        logging.info("on_file_button_clicked")
+
         file_path, _filter = QFileDialog.getOpenFileName(self, "Выбор файла",
-                                                         self.settings.value("excel/default_path"),
+                                                         str(self.settings.value("excel/default_path")),
                                                          "*.xlsx")
-        print("choosed: " + file_path)
+        logging.info(f"choosed file: {file_path} default_path = {str(self.settings.value("excel/default_path"))}")
         self.file_line.setText(file_path)
 
     def read_excel(self):
-        print("read excel")
+        logging.info("read_excel")
         self.phones = read_excel(self.file_line.text())
+        logging.debug(f"read phones: {self.phones}")
         self.phone_count_label.setText(str(len(self.phones)))
 
     def on_test_button_clicked(self):
+        logging.info("on_test_button_clicked")
         self.send("test")
 
     def on_send_button_clicked(self):
+        logging.info("on_send_button_clicked")
         self.send("whatsapp")
 
     def send(self, mode):
-
+        logging.info(f"send mode = {mode}")
         if len(self.phones) == 0:
+            logging.info("phones is empty")
             QMessageBox.critical(self, "Не загружены телефоны",
                                  "Некому отправить такую прекрасную рассылку. "
                                  "Выберете какой-нибудь файл excel, где есть колонка с именем Телефон "
                                  "и в этой колонке какие-нибудь телефоны")
             return
         elif self.spam_text.toPlainText() == "":
+            logging.info("text is empty")
             QMessageBox.critical(self, "Пустой текст рассылки", "Давайте не будем такое отправлять. Напишите что-нибудь")
             return
 
@@ -163,31 +185,41 @@ class WatsappSpamWindow(QWidget):
             QMessageBox.StandardButton.No
         )
         if answer == QMessageBox.StandardButton.Yes:
+            logging.info("start spam")
             self.logging(mode, "Рассылка начата... Пути назад нет :)")
             spam = threading.Thread(target=self.send_thread, args=(mode,), daemon=True)
             spam.start()
         else:
+            logging.info("no spam")
             self.logging(mode, "На нет и суда нет :)")
 
     def send_thread(self, mode):
+        logging.info(f"send_thread mode = {mode}")
         for phone in self.phones:
             log = None
+            logging.debug(f"send mode = {mode} phone = {phone}")
             self.log_signal.emit(mode, "Попытка отправки сообщения на номер " + phone)
             if mode == "test":
                 log = self.test_spam(phone, self.spam_text.toPlainText())
             elif mode == "whatsapp":
                 log = self.whatsapp.send_spam(phone, self.spam_text.toPlainText())
+
+            logging.debug(f"sent mode = {mode} phone = {phone}")
             self.log_signal.emit(mode, log)
             sleep(self.send_delay.value())
 
+        logging.info(f"send_thread end mode = {mode}")
         self.spam_sent.emit(mode)
 
     def test_spam(self, phone, text):
+        logging.info(f"test_spam phone = {phone}, text = {text}")
         return "[" + str(phone) + "]: " + str(text)
 
     @Slot(str)
     def widget_enabled(self, mode):
+        logging.info(f"widget_enabled mode = {mode}")
         if mode == "whatsapp":
+            logging.info("widget_enabled close browser")
             self.whatsapp.close_browser()
 
         self.logging(mode, "Выдыхаем, все закончилось")
@@ -199,6 +231,7 @@ class WatsappSpamWindow(QWidget):
 
     @Slot(str, str)
     def logging(self, mode, text):
+        logging.info(f"logging mode = {mode}, text = {text}")
         self.log.appendPlainText("[" + str(mode) + "]" + "[" + str(datetime.now()) + "] " + str(text))
         self.log.repaint()
 

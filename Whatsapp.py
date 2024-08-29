@@ -1,5 +1,6 @@
 import os
 
+import logging
 from PySide6.QtCore import QSettings
 from selenium.common import TimeoutException, NoSuchElementException
 from selenium.webdriver.chrome.service import Service
@@ -26,7 +27,7 @@ class Whatsapp:
         self.options = webdriver.ChromeOptions()
         self.options.add_argument('--allow-profiles-outside-user-dir')
         self.options.add_argument('--enable-profile-shortcut-manager')
-        self.options.add_argument(r'user-data-dir=' + settings.value("whatsapp/cache_dir"))
+        self.options.add_argument(r'user-data-dir=' + str(settings.value("whatsapp/cache_dir")))
         self.options.add_argument('--profile-directory=Hacker')
         self.options.add_argument('--profiling-flush=n')
         self.options.add_argument('--enable-aggressive-domstorage-flushing')
@@ -35,11 +36,14 @@ class Whatsapp:
         self.options.add_argument('--headless')
 
     def lazy_init(self):
+        logging.info("lazy_init")
         if self.driver is None:
+            logging.info("self.driver is None")
             self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=self.options)
             self.wait = WebDriverWait(self.driver, self.settings.value("whatsapp/timeout"))
 
     def authorization(self):
+        logging.info("authorization")
         driver = None
         wait = None
 
@@ -54,64 +58,86 @@ class Whatsapp:
             auth_options.add_argument('--disable-dev-shm-usage')
             auth_options.add_argument('--no-sandbox')
 
+            logging.info("create driver")
             driver =  webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=auth_options)
             wait = WebDriverWait(driver, self.settings.value("whatsapp/timeout"))
+            logging.info("load https://web.whatsapp.com")
             driver.get('https://web.whatsapp.com')
             qr_path = self.settings.value('whatsapp/qr_path')
 
+            logging.info("check_auth check chats")
             if not self.check_auth(wait):
-                print("hasn't chats. check qr....")
+                logging.info("check_auth hasn't chats. check qr....")
                 wait.until(EC.visibility_of_element_located((By.XPATH, qr_path)))
             else:
+                logging.info("check_auth has chats")
                 return True
 
+            logging.info("check_auth check qr in while")
             while driver.find_element(By.XPATH, qr_path).is_displayed():
-                print("waiting authorization....")
+                logging.info("waiting authorization....")
                 sleep(5)
+
+            logging.info("close driver")
             driver.close()
-        except NoSuchElementException:
+        except NoSuchElementException as ne:
+            logging.error("NoSuchElementException", exc_info=True)
+            logging.info("check auth")
             if wait is None or not self.check_auth(wait):
+                logging.info("check_auth false")
                 return False
+
             if driver is not None:
+                logging.info("close driver")
                 driver.close()
             return True
         except Exception as e:
-            print(e)
+            logging.error("Exception",exc_info=True)
             return False
         return True
 
     def check_auth(self, wait):
+        logging.info("check_auth")
         chats_path = self.settings.value('whatsapp/chats_path')
         try:
             wait.until(EC.visibility_of_element_located((By.XPATH, chats_path)))
             return True
-        except TimeoutException:
+        except TimeoutException as te:
+            logging.error("TimeoutException",exc_info=True)
             return False
 
 
     def send_spam(self, phone, text):
+        logging.info(f"send_spam phone = {phone}, text = {text}")
         self.lazy_init()
 
         clear_phone = re.sub('[() -]', '', phone)
-
+        logging.info(f"clear phone = {phone}")
         try:
             url = f"https://web.whatsapp.com/send?phone={clear_phone}&text={text.replace(' ', '+').replace('\n', '%0a')}"
+            logging.info(f"get url = {url}")
             self.driver.get(url)
             send_button_xpath = self.settings.value("whatsapp/send_button_xpath")
+            logging.info("wait send button")
             self.wait.until(EC.element_to_be_clickable((By.XPATH, send_button_xpath)))
+            logging.info("click send button")
             self.driver.find_element(By.XPATH, send_button_xpath).click()
-        except TimeoutException:
+        except TimeoutException as te:
+            logging.error(f"phone = {clear_phone} TimeoutException",exc_info=True)
             return "[" + str(clear_phone) + "]: " + "Таймаут отправки сообщения, скорее всего у абонента нет whatsapp"
         except Exception as e:
+            logging.error(f"phone = {clear_phone} Exception",exc_info=True)
             return "[" + str(clear_phone) + "]: " + "Ошибка отправки сообщения" + str(e)
 
+        logging.info(f"send success phone = {phone}")
         return "[" + str(clear_phone) + "]: " + str(text)
 
     def close_browser(self):
+        logging.info("close_browser")
         try:
             sleep(5) #подождать, чтобы последнее сообщение точно отправилось
             self.driver.close()
             self.driver = None
             self.wait = None
         except Exception as e:
-            print(e)
+            logging.error("Exception",exc_info=True)
