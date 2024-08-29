@@ -5,7 +5,6 @@ from PySide6.QtCore import QSettings
 from selenium.common import TimeoutException, NoSuchElementException
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support import expected_conditions as EC
-import re
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -111,10 +110,9 @@ class Whatsapp:
         logging.info(f"send_spam phone = {phone}, text = {text}")
         self.lazy_init()
 
-        clear_phone = re.sub('[() -]', '', phone)
         logging.info(f"clear phone = {phone}")
         try:
-            url = f"https://web.whatsapp.com/send?phone={clear_phone}&text={text.replace(' ', '+').replace('\n', '%0a')}"
+            url = f"https://web.whatsapp.com/send?phone={phone}&text={text.replace(' ', '+').replace('\n', '%0a')}"
             logging.info(f"get url = {url}")
             self.driver.get(url)
             send_button_xpath = self.settings.value("whatsapp/send_button_xpath")
@@ -123,14 +121,14 @@ class Whatsapp:
             logging.info("click send button")
             self.driver.find_element(By.XPATH, send_button_xpath).click()
         except TimeoutException as te:
-            logging.error(f"phone = {clear_phone} TimeoutException",exc_info=True)
-            return "[" + str(clear_phone) + "]: " + "Таймаут отправки сообщения, скорее всего у абонента нет whatsapp"
+            logging.error(f"phone = {phone} TimeoutException",exc_info=True)
+            return "[" + str(phone) + "]: " + "Таймаут отправки сообщения, скорее всего у абонента нет whatsapp"
         except Exception as e:
-            logging.error(f"phone = {clear_phone} Exception",exc_info=True)
-            return "[" + str(clear_phone) + "]: " + "Ошибка отправки сообщения" + str(e)
+            logging.error(f"phone = {phone} Exception",exc_info=True)
+            return "[" + str(phone) + "]: " + "Ошибка отправки сообщения" + str(e)
 
         logging.info(f"send success phone = {phone}")
-        return "[" + str(clear_phone) + "]: " + str(text)
+        return "[" + str(phone) + "]: " + str(text)
 
     def close_browser(self):
         logging.info("close_browser")

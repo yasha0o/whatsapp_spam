@@ -132,7 +132,7 @@ class WatsappSpamWindow(QWidget):
             self.authorization_label.setText('<p style="color: red;">Требуется вход</p>')
             self.send_button.setEnabled(False)
         else:
-            self.authorization_label.setText('Вход выполнен')
+            self.authorization_label.setText('<p style="color: green;">Вход выполнен</p>')
             self.send_button.setEnabled(True)
 
     def on_file_button_clicked(self):
@@ -146,9 +146,12 @@ class WatsappSpamWindow(QWidget):
 
     def read_excel(self):
         logging.info("read_excel")
-        self.phones = read_excel(self.file_line.text())
-        logging.debug(f"read phones: {self.phones}")
+        self.phones, not_correct = read_excel(self.file_line.text())
+        logging.debug(f"read phones: {self.phones}, not_correct: {not_correct}")
         self.phone_count_label.setText(str(len(self.phones)))
+        if not_correct:
+            self.logging("excel", "Некорректные телефоны, "
+                                  "на которые не будет осуществлена отправка: " + str(not_correct))
 
     def on_test_button_clicked(self):
         logging.info("on_test_button_clicked")
@@ -232,9 +235,16 @@ class WatsappSpamWindow(QWidget):
     @Slot(str, str)
     def logging(self, mode, text):
         logging.info(f"logging mode = {mode}, text = {text}")
-        self.log.appendPlainText("[" + str(mode) + "]" + "[" + str(datetime.now()) + "] " + str(text))
+        self.log.appendHtml('<p>' + self.color_mode(mode) + "[" + str(datetime.now()) + "] " + str(text) + '</p')
         self.log.repaint()
 
+    def color_mode(self, mode):
+        if mode == "test":
+            return '[<span style="color: green;">' + str(mode) + '</span>]'
+        if mode == "whatsapp" or mode == "excel":
+            return '[<span style="color: red;">' + str(mode) + '</span>]'
+
+        return '[' + str(mode) + ']'
 
 app = QApplication([])
 window = WatsappSpamWindow()
