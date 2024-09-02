@@ -141,7 +141,7 @@ class WatsappSpamWindow(QWidget):
         file_path, _filter = QFileDialog.getOpenFileName(self, "Выбор файла",
                                                          str(self.settings.value("excel/default_path")),
                                                          "*.xlsx")
-        logging.info(f"choosed file: {file_path} default_path = {str(self.settings.value("excel/default_path"))}")
+        logging.info(f"chose file: {file_path} default_path = {str(self.settings.value("excel/default_path"))}")
         self.file_line.setText(file_path)
 
     def read_excel(self):

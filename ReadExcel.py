@@ -15,7 +15,7 @@ def read_excel(filename):
             logging.info(f"sheet = {sheet}")
             for column in range(1, sheet.max_column + 1):
                 logging.debug(f"title cell = {sheet.cell(1, column).value}")
-                if (str(sheet.cell(1, column).value).lower() == "телефон"):
+                if str(sheet.cell(1, column).value).lower() == "телефон":
                     for row in range(2, sheet.max_row + 1):
                         logging.debug(f"value cell = {sheet.cell(row, column).value}")
                         phone = sheet.cell(row, column).value
@@ -28,7 +28,7 @@ def read_excel(filename):
                         if is_correct_phone and clear_phone not in phones:
                             phones.append(clear_phone)
                     break
-    except Exception as e:
-        logging.error("Exception",exc_info=True)
+    except Exception as ex:
+        logging.error("Exception",exc_info=ex)
 
     return  phones, not_correct

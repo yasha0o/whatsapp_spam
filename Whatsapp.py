@@ -1,17 +1,13 @@
-import os
-
 import logging
-from PySide6.QtCore import QSettings
-from selenium.common import TimeoutException, NoSuchElementException
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.support import expected_conditions as EC
-
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-
-from selenium.webdriver.support.ui import WebDriverWait
 from time import sleep
 
+from PySide6.QtCore import QSettings
+from selenium import webdriver
+from selenium.common import TimeoutException, NoSuchElementException
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
 
@@ -32,14 +28,16 @@ class Whatsapp:
         self.options.add_argument('--enable-aggressive-domstorage-flushing')
         self.options.add_argument('--disable-dev-shm-usage')
         self.options.add_argument('--no-sandbox')
-        self.options.add_argument('--headless')
+
+        if str(settings.value("whatsapp/headless")).lower() == 'true':
+            self.options.add_argument('--headless')
 
     def lazy_init(self):
         logging.info("lazy_init")
         if self.driver is None:
             logging.info("self.driver is None")
             self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=self.options)
-            self.wait = WebDriverWait(self.driver, self.settings.value("whatsapp/timeout"))
+            self.wait = WebDriverWait(self.driver, float(str(self.settings.value("whatsapp/timeout"))))
 
     def authorization(self):
         logging.info("authorization")
@@ -50,7 +48,7 @@ class Whatsapp:
             auth_options = webdriver.ChromeOptions()
             auth_options.add_argument('--allow-profiles-outside-user-dir')
             auth_options.add_argument('--enable-profile-shortcut-manager')
-            auth_options.add_argument(r'user-data-dir=' + self.settings.value("whatsapp/cache_dir"))
+            auth_options.add_argument(r'user-data-dir=' + str(self.settings.value("whatsapp/cache_dir")))
             auth_options.add_argument('--profile-directory=Hacker')
             auth_options.add_argument('--profiling-flush=n')
             auth_options.add_argument('--enable-aggressive-domstorage-flushing')
@@ -59,10 +57,10 @@ class Whatsapp:
 
             logging.info("create driver")
             driver =  webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=auth_options)
-            wait = WebDriverWait(driver, self.settings.value("whatsapp/timeout"))
+            wait = WebDriverWait(driver, float(str(self.settings.value("whatsapp/timeout"))))
             logging.info("load https://web.whatsapp.com")
             driver.get('https://web.whatsapp.com')
-            qr_path = self.settings.value('whatsapp/qr_path')
+            qr_path = str(self.settings.value('whatsapp/qr_path'))
 
             logging.info("check_auth check chats")
             if not self.check_auth(wait):
@@ -80,7 +78,7 @@ class Whatsapp:
             logging.info("close driver")
             driver.close()
         except NoSuchElementException as ne:
-            logging.error("NoSuchElementException", exc_info=True)
+            logging.error("NoSuchElementException", exc_info=ne)
             logging.info("check auth")
             if wait is None or not self.check_auth(wait):
                 logging.info("check_auth false")
@@ -90,19 +88,19 @@ class Whatsapp:
                 logging.info("close driver")
                 driver.close()
             return True
-        except Exception as e:
-            logging.error("Exception",exc_info=True)
+        except Exception as ex:
+            logging.error("Exception",exc_info=ex)
             return False
         return True
 
     def check_auth(self, wait):
         logging.info("check_auth")
-        chats_path = self.settings.value('whatsapp/chats_path')
+        chats_path = str(self.settings.value('whatsapp/chats_path'))
         try:
             wait.until(EC.visibility_of_element_located((By.XPATH, chats_path)))
             return True
         except TimeoutException as te:
-            logging.error("TimeoutException",exc_info=True)
+            logging.error("TimeoutException",exc_info=te)
             return False
 
 
@@ -115,17 +113,17 @@ class Whatsapp:
             url = f"https://web.whatsapp.com/send?phone={phone}&text={text.replace(' ', '+').replace('\n', '%0a')}"
             logging.info(f"get url = {url}")
             self.driver.get(url)
-            send_button_xpath = self.settings.value("whatsapp/send_button_xpath")
+            send_button_xpath = str(self.settings.value("whatsapp/send_button_xpath"))
             logging.info("wait send button")
             self.wait.until(EC.element_to_be_clickable((By.XPATH, send_button_xpath)))
             logging.info("click send button")
             self.driver.find_element(By.XPATH, send_button_xpath).click()
         except TimeoutException as te:
-            logging.error(f"phone = {phone} TimeoutException",exc_info=True)
+            logging.error(f"phone = {phone} TimeoutException",exc_info=te)
             return "[" + str(phone) + "]: " + "Таймаут отправки сообщения, скорее всего у абонента нет whatsapp"
-        except Exception as e:
-            logging.error(f"phone = {phone} Exception",exc_info=True)
-            return "[" + str(phone) + "]: " + "Ошибка отправки сообщения" + str(e)
+        except Exception as ex:
+            logging.error(f"phone = {phone} Exception",exc_info=ex)
+            return "[" + str(phone) + "]: " + "Ошибка отправки сообщения" + str(ex)
 
         logging.info(f"send success phone = {phone}")
         return "[" + str(phone) + "]: " + str(text)
@@ -133,9 +131,8 @@ class Whatsapp:
     def close_browser(self):
         logging.info("close_browser")
         try:
-            sleep(5) #подождать, чтобы последнее сообщение точно отправилось
             self.driver.close()
             self.driver = None
             self.wait = None
-        except Exception as e:
-            logging.error("Exception",exc_info=True)
+        except Exception as ex:
+            logging.error("Exception",exc_info=ex)
