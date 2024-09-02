@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QPlainTextEdit,
     QSplitter,
-    QWidget, QLabel, QSpinBox, QLineEdit, QFileDialog, QMessageBox, QStyle
+    QMainWindow, QLabel, QSpinBox, QLineEdit, QFileDialog, QMessageBox, QStyle, QDialog, QWidget
 )
 
 import Whatsapp
@@ -52,6 +52,9 @@ class WhatsappSpamWindow(QWidget):
         self.phones = []
         self.excel_reader.end_signal.connect(self.read_excel_end)
 
+        self.setObjectName("window")
+        self.setStyleSheet("QWidget#window { background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, "
+                           "stop: 0 #ededed, stop: 1 #e0e2e5);}")
         self.setWindowTitle("Рассылка сообщений в whatsapp")
         self.setWindowIcon(QIcon("resources/icon.png"))
         layout = QVBoxLayout()
