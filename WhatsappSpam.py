@@ -1,31 +1,43 @@
+import logging
 import sys
 import threading
+from array import array
 from datetime import datetime
 from time import sleep
 
-import logging
+from PySide6.QtCore import Signal, Slot, QSettings, QSize
+from PySide6.QtGui import QIcon,QMovie
 from PySide6.QtWidgets import (
     QApplication,
     QPushButton,
     QVBoxLayout,
     QHBoxLayout,
+    QGridLayout,
     QPlainTextEdit,
     QSplitter,
-    QWidget, QLabel, QSpinBox, QLineEdit, QFileDialog, QMessageBox
+    QWidget, QLabel, QSpinBox, QLineEdit, QFileDialog, QMessageBox, QStyle
 )
 
 import Whatsapp
-from ReadExcel import read_excel
-from PySide6.QtCore import Signal, Slot, QSettings
+from ExcelReader import ExcelReader
 
 
-class WatsappSpamWindow(QWidget):
+def color_mode(mode):
+    if mode == "test":
+        return '[<span style="color: green;">' + str(mode) + '</span>]'
+    if mode == "whatsapp" or mode == "excel":
+        return '[<span style="color: red;">' + str(mode) + '</span>]'
 
+    return '[' + str(mode) + ']'
+
+
+class WhatsappSpamWindow(QWidget):
     spam_sent = Signal(str)
     log_signal = Signal(str, str)
     settings = QSettings("settings.ini", QSettings.Format.IniFormat)
 
     whatsapp = Whatsapp.Whatsapp(settings)
+    excel_reader = ExcelReader()
 
     def __init__(self):
         super().__init__()
@@ -38,7 +50,10 @@ class WatsappSpamWindow(QWidget):
         logging.info(f"start settings = {self.settings.allKeys()}")
 
         self.phones = []
+        self.excel_reader.end_signal.connect(self.read_excel_end)
+
         self.setWindowTitle("Рассылка сообщений в whatsapp")
+        self.setWindowIcon(QIcon("resources/icon.png"))
         layout = QVBoxLayout()
 
         self.file_line = QLineEdit()
@@ -55,30 +70,48 @@ class WatsappSpamWindow(QWidget):
 
         self.phone_count_label = QLabel()
 
+        load_layout = QGridLayout()
+
         download_layout = QHBoxLayout()
         download_layout.addWidget(QLabel("Загружено телефонов для рассылки:"))
         download_layout.addWidget(self.phone_count_label)
         download_layout.addWidget(QSplitter())
+        load_layout.addLayout(download_layout, 0, 0, 1, 1)
 
-        layout.addLayout(download_layout)
+        text_label_layout = QHBoxLayout()
+        text_label_layout.addWidget(QLabel("Текст рассылки:"))
+        text_label_layout.addWidget(QSplitter())
+        load_layout.addLayout(text_label_layout, 1, 0, 1, 1)
+
+        self.load_gif = QLabel()
+        self.load_gif.setFixedSize(QSize(105, 60))
+        self.load_gif.setVisible(False)
+        self.gif = QMovie("resources/load.gif")
+        self.gif.setScaledSize(self.load_gif.size())
+        self.load_gif.setMovie(self.gif)
+        load_layout.addWidget(self.load_gif, 0, 1, 2, 1)
+        load_layout.setRowMinimumHeight(0, 30)
+        load_layout.setRowMinimumHeight(1, 30)
+
+        layout.addLayout(load_layout)
 
         self.spam_text = QPlainTextEdit()
-
         text_layout = QVBoxLayout()
-        text_layout.addWidget(QLabel("Текст рассылки:"))
         text_layout.addWidget(self.spam_text)
 
         layout.addLayout(text_layout)
 
         self.send_delay = QSpinBox()
         self.send_delay.setValue(5)
+        self.send_delay.setMinimumSize(QSize(40, 10))
+
         self.test_button = QPushButton("Тест")
         self.test_button.clicked.connect(self.on_test_button_clicked)
         self.send_button = QPushButton("Отправить")
         self.send_button.clicked.connect(self.on_send_button_clicked)
         self.send_button.setEnabled(False)
 
-        self.spam_sent.connect(self.widget_enabled)
+        self.spam_sent.connect(self.send_whatsapp_end)
 
         send_layout = QHBoxLayout()
         send_layout.addWidget(QLabel("Задержка отправки:"))
@@ -104,6 +137,7 @@ class WatsappSpamWindow(QWidget):
         self.log = QPlainTextEdit()
         self.log.setReadOnly(True)
         self.log_signal.connect(self.logging)
+        self.excel_reader.log_signal.connect(self.logging)
 
         log_layout = QVBoxLayout()
         log_layout.addWidget(QLabel("Логирование"))
@@ -112,7 +146,6 @@ class WatsappSpamWindow(QWidget):
         layout.addLayout(log_layout)
 
         self.setLayout(layout)
-
 
     def on_authorization_button_clicked(self):
         logging.info("on_authorization_button_clicked")
@@ -138,20 +171,25 @@ class WatsappSpamWindow(QWidget):
     def on_file_button_clicked(self):
         logging.info("on_file_button_clicked")
 
+        default_path =  str(self.settings.value("excel/default_path"))
         file_path, _filter = QFileDialog.getOpenFileName(self, "Выбор файла",
-                                                         str(self.settings.value("excel/default_path")),
+                                                        default_path,
                                                          "*.xlsx")
-        logging.info(f"chose file: {file_path} default_path = {str(self.settings.value("excel/default_path"))}")
+        logging.info(f"chose file: {file_path} default_path = {default_path}")
         self.file_line.setText(file_path)
 
     def read_excel(self):
         logging.info("read_excel")
-        self.phones, not_correct = read_excel(self.file_line.text())
-        logging.debug(f"read phones: {self.phones}, not_correct: {not_correct}")
+
+        read_excel = threading.Thread(target=self.excel_reader.read_excel, args=(self.file_line.text(),), daemon=True)
+        self.widget_disabled()
+        read_excel.start()
+
+    @Slot(array)
+    def read_excel_end(self, phones):
+        self.phones = phones
         self.phone_count_label.setText(str(len(self.phones)))
-        if not_correct:
-            self.logging("excel", "Некорректные телефоны, "
-                                  "на которые не будет осуществлена отправка: " + str(not_correct))
+        self.widget_enabled()
 
     def on_test_button_clicked(self):
         logging.info("on_test_button_clicked")
@@ -172,13 +210,9 @@ class WatsappSpamWindow(QWidget):
             return
         elif self.spam_text.toPlainText() == "":
             logging.info("text is empty")
-            QMessageBox.critical(self, "Пустой текст рассылки", "Давайте не будем такое отправлять. Напишите что-нибудь")
+            QMessageBox.critical(self, "Пустой текст рассылки",
+                                 "Давайте не будем такое отправлять. Напишите что-нибудь")
             return
-
-        self.test_button.setDisabled(True)
-        self.file_button.setDisabled(True)
-        self.send_button.setDisabled(True)
-        self.spam_text.setDisabled(True)
 
         answer = QMessageBox.question(
             self,
@@ -190,6 +224,7 @@ class WatsappSpamWindow(QWidget):
         if answer == QMessageBox.StandardButton.Yes:
             logging.info("start spam")
             self.logging(mode, "Рассылка начата... Пути назад нет :)")
+            self.widget_disabled()
             spam = threading.Thread(target=self.send_thread, args=(mode,), daemon=True)
             spam.start()
         else:
@@ -219,34 +254,40 @@ class WatsappSpamWindow(QWidget):
         return "[" + str(phone) + "]: " + str(text)
 
     @Slot(str)
-    def widget_enabled(self, mode):
+    def send_whatsapp_end(self, mode):
         logging.info(f"widget_enabled mode = {mode}")
         if mode == "whatsapp":
             logging.info("widget_enabled close browser")
             self.whatsapp.close_browser()
 
+        self.widget_enabled()
         self.logging(mode, "Выдыхаем, все закончилось")
 
+    def widget_enabled(self):
         self.test_button.setEnabled(True)
         self.file_button.setEnabled(True)
         self.send_button.setEnabled(True)
         self.spam_text.setEnabled(True)
+        self.load_gif.movie().stop()
+        self.load_gif.setVisible(False)
+
+    def widget_disabled(self):
+        self.test_button.setDisabled(True)
+        self.file_button.setDisabled(True)
+        self.send_button.setDisabled(True)
+        self.spam_text.setDisabled(True)
+        self.load_gif.movie().start()
+        self.load_gif.setVisible(True)
 
     @Slot(str, str)
     def logging(self, mode, text):
         logging.info(f"logging mode = {mode}, text = {text}")
-        self.log.appendHtml('<p>' + self.color_mode(mode) + "[" + str(datetime.now()) + "] " + str(text) + '</p')
+        self.log.appendHtml('<p>' + color_mode(mode) + "[" + str(datetime.now()) + "] " + str(text) + '</p')
         self.log.repaint()
 
-    def color_mode(self, mode):
-        if mode == "test":
-            return '[<span style="color: green;">' + str(mode) + '</span>]'
-        if mode == "whatsapp" or mode == "excel":
-            return '[<span style="color: red;">' + str(mode) + '</span>]'
 
-        return '[' + str(mode) + ']'
 
 app = QApplication([])
-window = WatsappSpamWindow()
+window = WhatsappSpamWindow()
 window.show()
 sys.exit(app.exec())
