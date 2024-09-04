@@ -25,8 +25,10 @@ from ExcelReader import ExcelReader
 def color_mode(mode):
     if mode == "test":
         return '[<span style="color: green;">' + str(mode) + '</span>]'
-    if mode == "whatsapp" or mode == "excel":
+    if mode == "whatsapp":
         return '[<span style="color: red;">' + str(mode) + '</span>]'
+    if mode == "excel":
+        return '[<span style="color: blue;">' + str(mode) + '</span>]'
 
     return '[' + str(mode) + ']'
 
