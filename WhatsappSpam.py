@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QPlainTextEdit,
     QSplitter,
-    QMainWindow, QLabel, QSpinBox, QLineEdit, QFileDialog, QMessageBox, QStyle, QDialog, QWidget
+    QLabel, QSpinBox, QLineEdit, QFileDialog, QMessageBox, QWidget
 )
 
 import Whatsapp

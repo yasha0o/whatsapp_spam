@@ -1,0 +1,1 @@
+C:\Users\ylia_\AppData\Local\Programs\Python\Python312\Scripts\pyinstaller.exe --onefile --add-data "settings.ini;." --add-data "resources/icon.png;./resources" --add-data "resources/load.gif;./resources" --windowed WhatsappSpam.py

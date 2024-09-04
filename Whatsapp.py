@@ -1,9 +1,7 @@
 import logging
 from time import sleep
 
-from PySide6 import QtCore
 from PySide6.QtCore import QSettings
-from PySide6.scripts.metaobjectdump import Signal
 from selenium import webdriver
 from selenium.common import TimeoutException, NoSuchElementException
 from selenium.webdriver.chrome.service import Service

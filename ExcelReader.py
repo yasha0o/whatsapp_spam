@@ -1,8 +1,8 @@
 import logging
 import re
+from array import array
 
 import openpyxl
-from PyQt6.sip import array
 from PySide6 import QtCore
 from PySide6.QtCore import Signal
 
