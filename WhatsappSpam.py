@@ -57,7 +57,13 @@ class WhatsappSpamWindow(QWidget):
 
         self.setObjectName("window")
         self.setStyleSheet("QWidget#window { background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, "
-                           "stop: 0 #ededed, stop: 1 #e0e2e5);}")
+                           "stop: 0 #ededed, stop: 1 #e0e2e5);}"
+                           "QPushButton {background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, "
+                           "stop: 0 #dadae2, stop: 1 #e3e5e7);"
+                           "padding: 2px;"
+                           "padding-left: 6px; "
+                           "padding-right: 6px; }")
+
         self.setWindowTitle("Рассылка сообщений в whatsapp")
         self.setWindowIcon(QIcon("resources/icon.png"))
         layout = QVBoxLayout()
@@ -285,6 +291,7 @@ class WhatsappSpamWindow(QWidget):
         self.test_button.setEnabled(True)
         self.file_button.setEnabled(True)
         self.send_button.setEnabled(True)
+        self.authorization_button.setEnabled(True)
         self.spam_text.setEnabled(True)
         self.load_gif.movie().stop()
         self.load_gif.setVisible(False)
@@ -293,6 +300,7 @@ class WhatsappSpamWindow(QWidget):
         self.test_button.setDisabled(True)
         self.file_button.setDisabled(True)
         self.send_button.setDisabled(True)
+        self.authorization_button.setDisabled(True)
         self.spam_text.setDisabled(True)
         self.load_gif.movie().start()
         self.load_gif.setVisible(True)
