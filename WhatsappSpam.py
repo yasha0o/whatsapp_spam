@@ -178,6 +178,7 @@ class WhatsappSpamWindow(QWidget):
 
     def set_authorization_label(self, check_result):
         logging.info("set_authorization_label")
+        self.authorization_label.setProperty("authorization", check_result)
 
         if not check_result:
             self.authorization_label.setText('<p style="color: red;">Требуется вход</p>')
@@ -290,7 +291,11 @@ class WhatsappSpamWindow(QWidget):
     def widget_enabled(self):
         self.test_button.setEnabled(True)
         self.file_button.setEnabled(True)
-        self.send_button.setEnabled(True)
+
+        is_auth =self.authorization_label.property("authorization")
+        if is_auth:
+            self.send_button.setEnabled(True)
+
         self.authorization_button.setEnabled(True)
         self.spam_text.setEnabled(True)
         self.load_gif.movie().stop()

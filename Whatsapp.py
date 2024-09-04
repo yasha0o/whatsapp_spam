@@ -31,7 +31,7 @@ class Whatsapp:
         self.options.add_argument('--disable-dev-shm-usage')
         self.options.add_argument('--no-sandbox')
 
-        if str(settings.value("whatsapp/headless")).lower() == 'true':
+        if str(settings.value("whatsapp/show_browser")).lower() != 'true':
             self.options.add_argument('--headless')
 
     def lazy_init(self):
