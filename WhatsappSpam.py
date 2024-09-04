@@ -34,6 +34,7 @@ def color_mode(mode):
 
 
 class WhatsappSpamWindow(QWidget):
+    authorization_end = Signal(bool)
     spam_sent = Signal(str)
     log_signal = Signal(str, str)
     settings = QSettings("settings.ini", QSettings.Format.IniFormat)
@@ -131,6 +132,7 @@ class WhatsappSpamWindow(QWidget):
         self.authorization_button = QPushButton("Проверить авторизацию / Войти")
         self.authorization_button.clicked.connect(self.on_authorization_button_clicked)
         self.authorization_label = QLabel("<-- Для разблокировки отправки авторизуйтесь")
+        self.authorization_end.connect(self.authorization_whatsapp_end)
 
         authorization_layout = QHBoxLayout()
         authorization_layout.addWidget(self.authorization_button)
@@ -159,9 +161,14 @@ class WhatsappSpamWindow(QWidget):
                                  "Просьба не закрывать браузер, "
                                  "даже если авторизация уже завершилась/не потребовалась. "
                                  "Проверка может занять некоторое время...")
+        authorization = threading.Thread(target=self.authorization_thread, args=(), daemon=True)
+        self.widget_disabled()
+        authorization.start()
+
+    def authorization_thread(self):
         result = self.whatsapp.authorization()
         logging.info(f"self.whatsapp.authorization() result {result}")
-        self.set_authorization_label(result)
+        self.authorization_end.emit(result)
 
     def set_authorization_label(self, check_result):
         logging.info("set_authorization_label")
@@ -257,6 +264,12 @@ class WhatsappSpamWindow(QWidget):
     def test_spam(self, phone, text):
         logging.info(f"test_spam phone = {phone}, text = {text}")
         return "[" + str(phone) + "]: " + str(text)
+
+    @Slot(bool)
+    def authorization_whatsapp_end(self, result):
+        self.set_authorization_label(result)
+        self.widget_enabled()
+
 
     @Slot(str)
     def send_whatsapp_end(self, mode):
