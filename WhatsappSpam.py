@@ -5,6 +5,7 @@ from array import array
 from datetime import datetime
 from time import sleep
 
+from PySide6 import QtCore
 from PySide6.QtCore import Signal, Slot, QSettings, QSize
 from PySide6.QtGui import QIcon,QMovie
 from PySide6.QtWidgets import (
@@ -319,6 +320,11 @@ class WhatsappSpamWindow(QWidget):
 
 
 app = QApplication([])
+translator = QtCore.QTranslator(app)
+locale = QtCore.QLocale.system().name()
+path = QtCore.QLibraryInfo.location(QtCore.QLibraryInfo.LibraryPath.TranslationsPath)
+translator.load('qt_%s' % locale, path)
+app.installTranslator(translator)
 window = WhatsappSpamWindow()
 window.show()
 sys.exit(app.exec())
